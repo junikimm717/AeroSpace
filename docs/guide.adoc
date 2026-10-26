@@ -472,7 +472,9 @@ every window gets the same area. It is the analog of bspwm's `balance`.
 `layout accordion` (and `h_accordion`/`v_accordion`) turns on a monocle for the *whole workspace*, like
 bspwm's `desktop -l monocle`: every tiling window covers the workspace, and the tree is kept as is.
 `layout tiles` (or `h_tiles`/`v_tiles`) turns it off and restores the exact tiling, so
-`layout tiles accordion` toggles it. Stacking just the focused window's two-window container, which is
+`layout tiles accordion` toggles it. While the monocle is on, `focus left|up` and `focus right|down` cycle
+through every window of the workspace (like bspwm's `node -f prev.local|next.local`), because all the
+windows cover the same area and walking the tree by direction would only ever reach a couple of them. Stacking just the focused window's two-window container, which is
 what accordion means under `i3`, would be of little use in a BSP tree.
 
 For bspwm's `node -s {west,south,north,east}`, bind xref:commands.adoc#swap[swap] rather than

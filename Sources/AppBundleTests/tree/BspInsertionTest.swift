@@ -303,6 +303,34 @@ final class BspInsertionTest: XCTestCase {
         assertEquals(workspace.isMonocle, false)
     }
 
+    func testDirectionalFocusCyclesThroughEveryWindowInMonocle() async {
+        // h_tiles[w1, v_tiles[w2, w3]]: walking the tree, 'focus right' would bounce between w1 and w2 forever
+        let workspace = Workspace.get(byName: name).apply {
+            $0.rootTilingContainer.apply {
+                assertEquals(TestWindow.new(id: 1, parent: $0).focusWindow(), true)
+                TilingContainer.newVTiles(parent: $0, adaptiveWeight: 1).apply {
+                    TestWindow.new(id: 2, parent: $0)
+                    TestWindow.new(id: 3, parent: $0)
+                }
+            }
+        }
+        workspace.isMonocle = true
+
+        var visited: [UInt32] = []
+        for _ in 1 ... 4 {
+            await parseCommand("focus right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            visited.append(focus.windowOrNil.orDie().windowId)
+        }
+        assertEquals(visited, [2, 3, 1, 2])
+
+        visited = []
+        for _ in 1 ... 3 {
+            await parseCommand("focus up").cmdOrDie.run(.defaultEnv, .emptyStdin)
+            visited.append(focus.windowOrNil.orDie().windowId)
+        }
+        assertEquals(visited, [1, 3, 2])
+    }
+
     func testFlattenWorkspaceTreeRebuildsABalancedTree() async {
         let workspace = Workspace.get(byName: name).apply {
             $0.rootTilingContainer.apply { // A degenerate right-leaning chain, the worst case for bsp

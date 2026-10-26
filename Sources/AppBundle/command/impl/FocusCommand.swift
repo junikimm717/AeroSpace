@@ -25,6 +25,18 @@ struct FocusCommand: Command {
         switch args.target {
             case .direction(let direction):
                 let window = target.windowOrNil
+                if config.tilingInsertionMode == .bsp, target.workspace.isMonocle, let window, window.parent is TilingContainer {
+                    // Every window covers the whole workspace in monocle, so geometry means nothing and
+                    // walking the tree by direction would only ever reach a couple of them. Cycle through
+                    // all of them instead, like bspwm's `node -f next.local`
+                    let windows = target.workspace.rootTilingContainer.allLeafWindowsRecursive
+                    guard let currentIndex = windows.firstIndex(of: window) else { return .fail(io.err(bugPrompt())) }
+                    let targetIndex = currentIndex + direction.focusOffset
+                    if args.boundaries == .allMonitorsOuterFrame && !windows.indices.contains(targetIndex) {
+                        return hitWorkspaceBoundaries(target, io, args, direction)
+                    }
+                    return .from(bool: windows[(targetIndex + windows.count) % windows.count].focusWindow())
+                }
                 if let (parent, ownIndex) = window?.closestParent(hasChildrenInDirection: direction, withLayout: nil) {
                     guard let windowToFocus = parent.children[ownIndex + direction.focusOffset]
                         .findLeafWindowRecursive(snappedTo: direction.opposite) else { return .fail(io.err(bugPrompt())) }
