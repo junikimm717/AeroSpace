@@ -469,6 +469,12 @@ window appeared. Use xref:commands.adoc#join-with[join-with] when you want to gr
 container, so it does the nearest equivalent: it rebuilds the workspace as a balanced tree in which
 every window gets the same area. It is the analog of bspwm's `balance`.
 
+`layout accordion` (and `h_accordion`/`v_accordion`) turns on a monocle for the *whole workspace*, like
+bspwm's `desktop -l monocle`: every tiling window covers the workspace, and the tree is kept as is.
+`layout tiles` (or `h_tiles`/`v_tiles`) turns it off and restores the exact tiling, so
+`layout tiles accordion` toggles it. Stacking just the focused window's two-window container, which is
+what accordion means under `i3`, would be of little use in a BSP tree.
+
 For bspwm's `node -s {west,south,north,east}`, bind xref:commands.adoc#swap[swap] rather than
 xref:commands.adoc#move[move]: `swap` trades places with the neighbouring window and never changes the
 shape of the tree. `move` works under `bsp` too, but it re-parents windows, and it does nothing at the

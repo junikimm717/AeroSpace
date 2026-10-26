@@ -20,7 +20,16 @@ extension TreeNode {
             case .workspace(let workspace):
                 lastAppliedLayoutPhysicalRect = physicalRect
                 lastAppliedLayoutVirtualRect = virtual
-                try await workspace.rootTilingContainer.layoutRecursive(point, width: width, height: height, virtual: virtual, context)
+                if workspace.isMonocle && config.tilingInsertionMode == .bsp {
+                    for window in workspace.rootTilingContainer.allLeafWindowsRecursive {
+                        // Keep the virtual rect from the last tiled pass: 'longest-side' measures it to pick
+                        // the split axis for windows opened while in monocle
+                        let windowVirtual = window.lastAppliedLayoutVirtualRect ?? virtual
+                        try await window.layoutRecursive(point, width: width, height: height, virtual: windowVirtual, context)
+                    }
+                } else {
+                    try await workspace.rootTilingContainer.layoutRecursive(point, width: width, height: height, virtual: virtual, context)
+                }
                 try await workspace.floatingWindowsContainer.layoutRecursive(point, width: width, height: height, virtual: virtual, context)
             case .floatingWindowsContainer(let container):
                 for window in container.children.filterIsInstance(of: Window.self) {

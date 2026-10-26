@@ -58,6 +58,10 @@ on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
     alt-shift-comma  = 'join-with left'
     alt-shift-period = 'join-with right'
 
+    # bspwm: super + m -> desktop -l next. Monocle for the whole workspace; the tree is kept and comes
+    # back exactly as it was
+    alt-m = 'layout tiles accordion'
+
     # bspwm: super + {t,shift + space} -> state {tiled,floating}
     alt-t = 'layout tiling floating'
     alt-f = 'fullscreen'

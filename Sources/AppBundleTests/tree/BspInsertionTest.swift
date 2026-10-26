@@ -264,6 +264,45 @@ final class BspInsertionTest: XCTestCase {
         )
     }
 
+    func testAccordionIsAWholeWorkspaceMonocle() async throws {
+        // h_tiles[w1, h_tiles[w2, w3]] with w3 focused: 'layout v_accordion' would only stack w2 and w3 in i3
+        // terms. bspwm's monocle covers the whole desktop and keeps the tree for when it's turned off
+        let workspace = Workspace.get(byName: name).apply {
+            $0.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0)
+                TilingContainer.newHTiles(parent: $0, adaptiveWeight: 1).apply {
+                    TestWindow.new(id: 2, parent: $0)
+                    assertEquals(TestWindow.new(id: 3, parent: $0).focusWindow(), true)
+                }
+            }
+        }
+        let tree = workspace.rootTilingContainer.layoutDescription
+        let windows = workspace.rootTilingContainer.allLeafWindowsRecursive
+
+        await parseCommand("layout v_accordion").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(workspace.isMonocle, true)
+        assertEquals(workspace.rootTilingContainer.layoutDescription, tree)
+        try await workspace.layoutWorkspace()
+        let fullRect = workspace.lastAppliedLayoutPhysicalRect.orDie()
+        for window in windows { // All stacked over the whole workspace
+            assertEquals(window.lastAppliedLayoutPhysicalRect?.width, fullRect.width)
+            assertEquals(window.lastAppliedLayoutPhysicalRect?.topLeftX, fullRect.topLeftX)
+        }
+
+        await parseCommand("layout tiles").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(workspace.isMonocle, false)
+        try await workspace.layoutWorkspace()
+        assertEquals(workspace.rootTilingContainer.layoutDescription, tree)
+        let w1 = windows[0].lastAppliedLayoutPhysicalRect.orDie().width
+        let w2 = windows[1].lastAppliedLayoutPhysicalRect.orDie().width
+        assertTrue(w1 > 1.5 * w2) // Back to half / quarter / quarter
+
+        await parseCommand("layout tiles accordion").cmdOrDie.run(.defaultEnv, .emptyStdin) // Toggles
+        assertEquals(workspace.isMonocle, true)
+        await parseCommand("layout tiles accordion").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        assertEquals(workspace.isMonocle, false)
+    }
+
     func testFlattenWorkspaceTreeRebuildsABalancedTree() async {
         let workspace = Workspace.get(byName: name).apply {
             $0.rootTilingContainer.apply { // A degenerate right-leaning chain, the worst case for bsp

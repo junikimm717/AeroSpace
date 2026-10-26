@@ -37,15 +37,34 @@ struct LayoutCommand: Command {
                 node = .tilingContainer(target.workspace.rootTilingContainer)
         }
 
-        let targetDescription = args.toggleBetween.val.first(where: { !node.matchesDescription($0) })
+        let matches = { (it: LayoutCmdArgs.LayoutDescription) in
+            node.bspMonocleMatchesDescription(it, target.workspace) ?? node.matchesDescription(it)
+        }
+        let targetDescription = args.toggleBetween.val.first(where: { !matches($0) })
             ?? args.toggleBetween.val.first.orDie()
-        if node.matchesDescription(targetDescription) {
+        if matches(targetDescription) {
             switch args.failIfNoop {
                 case true: return .fail
                 case false:
                     let msg = "Already in the requested \(targetDescription.rawValue) mode. " +
                         "Tip: use --fail-if-noop to exit with non-zero exit code"
                     return .succ(io.err(msg))
+            }
+        }
+        if config.tilingInsertionMode == .bsp, node.tilingContainerOrNil != nil {
+            // In 'bsp' an accordion is the whole workspace's monocle, like bspwm's `desktop -l monocle`.
+            // Stacking a single two-window container instead would be of little use
+            switch targetDescription {
+                case .accordion, .h_accordion, .v_accordion:
+                    target.workspace.isMonocle = true
+                    return .succ
+                case .tiles:
+                    target.workspace.isMonocle = false
+                    return .succ
+                case .h_tiles, .v_tiles: // Leave monocle, then rotate the container as usual
+                    target.workspace.isMonocle = false
+                case .horizontal, .vertical, .tiling, .floating:
+                    break
             }
         }
         switch targetDescription {
@@ -111,6 +130,19 @@ struct LayoutCommand: Command {
 }
 
 extension ConventionalWindowParentCases {
+    /// `nil` when the description isn't about monocle, or when monocle doesn't apply
+    @MainActor
+    fileprivate func bspMonocleMatchesDescription(_ layout: LayoutCmdArgs.LayoutDescription, _ workspace: Workspace) -> Bool? {
+        guard config.tilingInsertionMode == .bsp, let container = tilingContainerOrNil else { return nil }
+        return switch layout {
+            case .accordion, .h_accordion, .v_accordion: workspace.isMonocle
+            case .tiles:   !workspace.isMonocle
+            case .h_tiles: !workspace.isMonocle && container.orientation == .h
+            case .v_tiles: !workspace.isMonocle && container.orientation == .v
+            case .horizontal, .vertical, .tiling, .floating: nil
+        }
+    }
+
     fileprivate func matchesDescription(_ layout: LayoutCmdArgs.LayoutDescription) -> Bool {
         return switch layout {
             case .accordion:   tilingContainerOrNil?.layout == .accordion
