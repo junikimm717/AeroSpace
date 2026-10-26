@@ -186,3 +186,5 @@ so live testing normally needs no extra permission.
   `aerospace reload-config`, which prints errors and warnings.
 - Already-open windows keep their layout after enabling BSP. `aerospace flatten-workspace-tree` rebuilds a
   workspace as a balanced BSP tree.
+- The user wants literal bspwm behaviour. Directional window moves are bound to `swap <dir>` (bspwm's
+  `node -s`: trade places, tree shape unchanged, no-op at the edge), not `move`. Don't rebind them to `move`.
