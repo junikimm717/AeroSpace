@@ -469,6 +469,11 @@ window appeared. Use xref:commands.adoc#join-with[join-with] when you want to gr
 container, so it does the nearest equivalent: it rebuilds the workspace as a balanced tree in which
 every window gets the same area. It is the analog of bspwm's `balance`.
 
+For bspwm's `node -s {west,south,north,east}`, bind xref:commands.adoc#swap[swap] rather than
+xref:commands.adoc#move[move]: `swap` trades places with the neighbouring window and never changes the
+shape of the tree. `move` works under `bsp` too, but it re-parents windows, and it does nothing at the
+screen edge unless `--boundaries-action` says otherwise.
+
 See also: xref:goodies.adoc#bsp-config[bspwm like config].
 
 [#floating-windows]

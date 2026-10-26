@@ -32,12 +32,13 @@ on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
     alt-l = 'focus right'
 
     # bspwm: super + shift + {h,j,k,l} -> node -s {west,south,north,east}
-    # 'move' swaps with the neighbour when there is one, and re-parents the window one level up when
-    # it has reached the edge of its container
-    alt-shift-h = 'move left'
-    alt-shift-j = 'move down'
-    alt-shift-k = 'move up'
-    alt-shift-l = 'move right'
+    # 'swap' trades places with the neighbouring window and never reshapes the tree, exactly like
+    # bspwm's 'node -s'. At the screen edge it does nothing. ('move' also works in 'bsp', but it
+    # re-parents windows, which bspwm never does)
+    alt-shift-h = 'swap left'
+    alt-shift-j = 'swap down'
+    alt-shift-k = 'swap up'
+    alt-shift-l = 'swap right'
 
     # bspwm: super + {ctrl + ,}{h,j,k,l} -> node -z ...
     # Each container holds exactly two children in 'bsp', so a resize is exactly a split-ratio nudge

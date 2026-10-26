@@ -55,7 +55,7 @@ struct MoveCommand: Command {
 ) -> BinaryExitCode {
     switch args.boundaries {
         case .workspace:
-            switch args.boundariesAction {
+            switch args.effectiveBoundariesAction {
                 case .stop: return .succ
                 case .fail: return .fail
                 case .createImplicitContainer:
@@ -85,12 +85,24 @@ struct MoveCommand: Command {
     _ args: MoveCmdArgs,
     _ direction: CardinalDirection,
 ) -> BinaryExitCode {
-    switch args.boundariesAction {
+    switch args.effectiveBoundariesAction {
         case .stop: return .succ
         case .fail: return .fail
         case .createImplicitContainer:
             createImplicitContainerAndMoveWindow(window, workspace, direction)
             return .succ
+    }
+}
+
+extension MoveCmdArgs {
+    /// In 'bsp', moving into the edge of the screen does nothing by default, like bspwm's `node -s`.
+    /// The implicit container would stretch the window across the whole edge and knock its former
+    /// siblings onto the other axis, which reads as the layout suddenly rotating.
+    /// An explicit --boundaries-action still wins.
+    @MainActor
+    fileprivate var effectiveBoundariesAction: WhenBoundariesCrossed {
+        if rawBoundariesAction == nil && config.tilingInsertionMode == .bsp { return .stop }
+        return boundariesAction
     }
 }
 

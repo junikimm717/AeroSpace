@@ -182,8 +182,35 @@ final class BspInsertionTest: XCTestCase {
         )
     }
 
-    func testMoveIntoTheWorkspaceEdgeTakesHalfTheScreen() async {
-        // h_tiles[w1, h_tiles[w2, w3]]: nothing is right of w3, so it falls through to the workspace boundary
+    func testMoveIntoTheWorkspaceEdgeIsANoop() async {
+        // h_tiles[w1, v_tiles[w2, w3]]: w2 already touches the top of the screen. bspwm does nothing here,
+        // whereas the implicit container would stretch w2 across the whole top and push w3 next to w1
+        let workspace = Workspace.get(byName: name).apply {
+            $0.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0)
+                TilingContainer.newVTiles(parent: $0, adaptiveWeight: 1).apply {
+                    assertEquals(TestWindow.new(id: 2, parent: $0).focusWindow(), true)
+                    TestWindow.new(id: 3, parent: $0)
+                }
+            }
+        }
+        let before = workspace.rootTilingContainer.layoutDescription
+
+        await parseCommand("move up").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        workspace.normalizeContainers()
+        assertEquals(workspace.rootTilingContainer.layoutDescription, before)
+
+        // Pressing towards the sibling still swaps
+        await parseCommand("move down").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        workspace.normalizeContainers()
+        assertEquals(
+            workspace.rootTilingContainer.layoutDescription,
+            .h_tiles([.window(1), .v_tiles([.window(3), .window(2)])]),
+        )
+    }
+
+    func testExplicitBoundariesActionStillCreatesTheImplicitContainer() async {
+        // h_tiles[w1, h_tiles[w2, w3]]: nothing is right of w3
         let workspace = Workspace.get(byName: name).apply {
             $0.rootTilingContainer.apply {
                 TestWindow.new(id: 1, parent: $0)
@@ -198,7 +225,42 @@ final class BspInsertionTest: XCTestCase {
         workspace.normalizeContainers()
         assertEquals(
             workspace.rootTilingContainer.layoutDescription,
+            .h_tiles([.window(1), .h_tiles([.window(2), .window(3)])]),
+        )
+
+        await parseCommand("move --boundaries-action create-implicit-container right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        workspace.normalizeContainers()
+        assertEquals(
+            workspace.rootTilingContainer.layoutDescription,
             .h_tiles([.h_tiles([.window(1), .window(2)]), .window(3)]),
+        )
+    }
+
+    func testSwapIsBspwmNodeSwap() async {
+        // h_tiles[w1, h_tiles[w2, w3]]: the bspwm way to put the small w2 where the big w1 is
+        let workspace = Workspace.get(byName: name).apply {
+            $0.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0)
+                TilingContainer.newHTiles(parent: $0, adaptiveWeight: 1).apply {
+                    assertEquals(TestWindow.new(id: 2, parent: $0).focusWindow(), true)
+                    TestWindow.new(id: 3, parent: $0)
+                }
+            }
+        }
+
+        await parseCommand("swap left").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        workspace.normalizeContainers()
+        assertEquals( // Same shape, w1 and w2 traded places, focus stayed on w2
+            workspace.rootTilingContainer.layoutDescription,
+            .h_tiles([.window(2), .h_tiles([.window(1), .window(3)])]),
+        )
+        assertEquals(focus.windowOrNil?.windowId, 2)
+
+        await parseCommand("swap left").cmdOrDie.run(.defaultEnv, .emptyStdin) // Screen edge
+        workspace.normalizeContainers()
+        assertEquals(
+            workspace.rootTilingContainer.layoutDescription,
+            .h_tiles([.window(2), .h_tiles([.window(1), .window(3)])]),
         )
     }
 
