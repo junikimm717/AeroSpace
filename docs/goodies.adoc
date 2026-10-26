@@ -238,6 +238,19 @@ link:config-examples/i3-like-config-example.toml[Download i3-like-config.toml]
 include::config-examples/i3-like-config-example.toml[]
 ----
 
+[#bsp-config]
+== bspwm like config
+
+A config for xref:guide.adoc#tiling-insertion-mode[`tiling-insertion-mode = 'bsp'`], where every new
+window splits the focused one in two instead of squeezing in next to it.
+
+link:config-examples/bsp-config-example.toml[Download bsp-config.toml]
+
+[source,toml,subs="macros+,specialchars+"]
+----
+include::config-examples/bsp-config-example.toml[]
+----
+
 [#spacelist]
 == Spacelist
 

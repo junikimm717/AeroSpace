@@ -56,21 +56,42 @@ private func moveTilingWindow(_ window: Window) {
         .findWindowRecursively(in: targetWorkspace.rootTilingContainer, virtual: false, fullscreenCoversAll: false)?
         .takeIf { $0 != window }
     if targetWorkspace != window.nodeWorkspace { // Move window to a different monitor
-        let index: Int = if let swapTarget, let parent = swapTarget.parent as? TilingContainer, let targetRect = swapTarget.lastAppliedLayoutPhysicalRect {
-            mouseLocation.getProjection(parent.orientation) >= targetRect.center.getProjection(parent.orientation)
-                ? swapTarget.ownIndex.orDie() + 1
-                : swapTarget.ownIndex.orDie()
-        } else {
-            0
+        switch config.tilingInsertionMode {
+            case .i3:
+                let index: Int = if let swapTarget, let parent = swapTarget.parent as? TilingContainer, let targetRect = swapTarget.lastAppliedLayoutPhysicalRect {
+                    mouseLocation.getProjection(parent.orientation) >= targetRect.center.getProjection(parent.orientation)
+                        ? swapTarget.ownIndex.orDie() + 1
+                        : swapTarget.ownIndex.orDie()
+                } else {
+                    0
+                }
+                window.bind(
+                    to: swapTarget?.parent ?? targetWorkspace.rootTilingContainer,
+                    adaptiveWeight: WEIGHT_AUTO,
+                    index: index,
+                )
+            case .bsp:
+                // `window` is on another monitor, so it can never be picked as its own anchor here
+                window.bindAsTilingWindow(at: bspDropBinding(on: swapTarget, in: targetWorkspace, at: mouseLocation))
         }
-        window.bind(
-            to: swapTarget?.parent ?? targetWorkspace.rootTilingContainer,
-            adaptiveWeight: WEIGHT_AUTO,
-            index: index,
-        )
     } else if let swapTarget {
         swapWindows(mruDominant: window, swapTarget)
     }
+}
+
+/// Splits the window the cursor was dropped on, along the axis of the half the cursor landed in:
+/// dropping on the left half of a window puts the drop to its left, and so on.
+@MainActor
+private func bspDropBinding(on swapTarget: Window?, in targetWorkspace: Workspace, at mouseLocation: CGPoint) -> BindingData {
+    guard let swapTarget, let targetRect = swapTarget.lastAppliedLayoutPhysicalRect else {
+        return tilingInsertionPoint(in: targetWorkspace)
+    }
+    let orientation = swapTarget.bspSplitOrientation
+    return bspSplit(
+        anchor: swapTarget,
+        orientation: orientation,
+        insertBefore: mouseLocation.getProjection(orientation) < targetRect.center.getProjection(orientation),
+    )
 }
 
 @MainActor

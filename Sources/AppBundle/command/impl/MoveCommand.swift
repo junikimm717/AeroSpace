@@ -121,8 +121,9 @@ private let moveOutMacosUnconventionalWindow = "moving macOS fullscreen, minimiz
         case .unbound: return .fail
         case .tilingContainer(let parent):
             check(parent.orientation == direction.orientation)
-            guard let ownIndex = innerMostTilingContainer.ownIndex else { return .fail(io.err(bugPrompt())) }
-            window.bind(to: parent, adaptiveWeight: WEIGHT_AUTO, index: ownIndex + direction.insertionOffset)
+            guard insertTilingWindow(window, pushing: innerMostTilingContainer, direction) else {
+                return .fail(io.err(bugPrompt()))
+            }
             return .succ
         case .workspace(let parent):
             return hitWorkspaceBoundaries(window, parent, io, args, direction, env)
@@ -144,16 +145,29 @@ private let moveOutMacosUnconventionalWindow = "moving macOS fullscreen, minimiz
 }
 
 @MainActor private func deepMoveIn(window: Window, into container: TilingContainer, moveDirection: CardinalDirection, _ io: CmdIo) -> BinaryExitCode {
-    let deepTarget = container.tilingTreeNodeCasesOrDie().findDeepMoveInTargetRecursive(moveDirection.orientation)
-    switch deepTarget {
-        case .tilingContainer(let deepTarget):
-            window.bind(to: deepTarget, adaptiveWeight: WEIGHT_AUTO, index: 0)
-        case .window(let deepTarget):
-            guard let parent = deepTarget.parent as? TilingContainer else { return .fail(io.err(bugPrompt())) }
-            guard let deepTargetIndex = deepTarget.ownIndex else { return .fail(io.err(bugPrompt())) }
-            window.bind(to: parent, adaptiveWeight: WEIGHT_AUTO, index: deepTargetIndex + 1)
+    switch config.tilingInsertionMode {
+        case .bsp:
+            // There is no room to grow a container in 'bsp', so the only way in is to split a leaf.
+            // Moving right into a container means landing on the left of its leftmost window, hence
+            // the two `opposite`s.
+            guard let deepTarget = container.findLeafWindowRecursive(snappedTo: moveDirection.opposite),
+                  insertTilingWindow(window, pushing: deepTarget, moveDirection.opposite)
+            else {
+                return .fail(io.err(bugPrompt()))
+            }
+            return .succ
+        case .i3:
+            let deepTarget = container.tilingTreeNodeCasesOrDie().findDeepMoveInTargetRecursive(moveDirection.orientation)
+            switch deepTarget {
+                case .tilingContainer(let deepTarget):
+                    window.bind(to: deepTarget, adaptiveWeight: WEIGHT_AUTO, index: 0)
+                case .window(let deepTarget):
+                    guard let parent = deepTarget.parent as? TilingContainer else { return .fail(io.err(bugPrompt())) }
+                    guard let deepTargetIndex = deepTarget.ownIndex else { return .fail(io.err(bugPrompt())) }
+                    window.bind(to: parent, adaptiveWeight: WEIGHT_AUTO, index: deepTargetIndex + 1)
+            }
+            return .succ
     }
-    return .succ
 }
 
 extension TilingTreeNodeCases {

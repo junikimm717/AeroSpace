@@ -14,6 +14,51 @@ final class ConfigTest: XCTestCase {
         assertEquals(result.config.enableNormalizationOppositeOrientationForNestedContainers, false)
     }
 
+    func testParseBspConfig() {
+        let toml = try! String(contentsOf: projectRoot.appending(component: "docs/config-examples/bsp-config-example.toml"), encoding: .utf8)
+        let result = parseConfig(toml)
+        assertEquals(result.errors, [])
+        assertEquals(result.warnings, [])
+        assertEquals(result.config.tilingInsertionMode, .bsp)
+        assertEquals(result.config.bspAutomaticScheme, .longestSide)
+        assertEquals(result.config.enableNormalizationFlattenContainers, true)
+        assertEquals(result.config.enableNormalizationOppositeOrientationForNestedContainers, false)
+    }
+
+    func testBspPinsBothNormalizations() {
+        let result = parseConfig(
+            """
+            config-version = 2
+            tiling-insertion-mode = 'bsp'
+            enable-normalization-flatten-containers = false
+            enable-normalization-opposite-orientation-for-nested-containers = true
+            """,
+        )
+        assertEquals(result.errors, [])
+        assertEquals(result.config.enableNormalizationFlattenContainers, true)
+        assertEquals(result.config.enableNormalizationOppositeOrientationForNestedContainers, false)
+        assertEquals(result.warnings.count, 2)
+    }
+
+    func testBspDoesntWarnWhenNormalizationsAreLeftAlone() {
+        let result = parseConfig(
+            """
+            config-version = 2
+            tiling-insertion-mode = 'bsp'
+            """,
+        )
+        assertEquals(result.errors, [])
+        assertEquals(result.warnings, [])
+    }
+
+    func testParseUnknownTilingInsertionMode() {
+        let result = parseConfig("tiling-insertion-mode = 'bspwm'")
+        assertEquals(
+            result.strErrors,
+            ["[ERROR] tiling-insertion-mode: Can't parse tiling insertion mode 'bspwm'. Possible values: i3|bsp"],
+        )
+    }
+
     func testEmptyConfig() {
         let result = parseConfig("")
         assertEquals(result.errors, [])

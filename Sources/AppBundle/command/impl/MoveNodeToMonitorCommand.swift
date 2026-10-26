@@ -15,18 +15,13 @@ struct MoveNodeToMonitorCommand: Command {
         }
         switch args.target.val.resolve(currentMonitor, wrapAround: args.wrapAround) {
             case .success(let targetMonitor):
-                let targetWs = targetMonitor.activeWorkspace
-                let index = true == args.target.val.directionOrNil
-                    .map { dir in dir.isPositive && targetWs.rootTilingContainer.orientation == dir.orientation }
-                    ? 0
-                    : INDEX_BIND_LAST
                 return moveWindowToWorkspace(
                     window,
-                    targetWs,
+                    targetMonitor.activeWorkspace,
                     io,
                     focusFollowsWindow: args.focusFollowsWindow,
                     failIfNoop: args.failIfNoop,
-                    index: index,
+                    enteringFrom: args.target.val.directionOrNil,
                 )
             case .failure(let msg):
                 return .fail(io.err(msg))

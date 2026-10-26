@@ -1,0 +1,101 @@
+# A bspwm-flavoured config: no window is ever narrower than half of its neighbour, because every new
+# window splits the focused one in two instead of squeezing in next to it.
+# Reference: https://github.com/baskerville/bspwm/blob/master/examples/bspwmrc
+
+config-version = 2
+
+# The whole point of this config.
+# 'bsp' also pins both normalizations (flatten on, opposite-orientation off) because it owns the
+# shape of the tree. See: https://nikitabobko.github.io/AeroSpace/guide#tiling-insertion-mode
+tiling-insertion-mode = 'bsp'
+
+# 'longest-side' is bspwm's default automatic_scheme: always cut the focused window's longer side, so
+# windows stay roughly square. Use 'alternate' if you prefer a predictable h/v/h/v rhythm instead.
+bsp-automatic-scheme = 'longest-side'
+
+# Mouse follows focus when focused monitor changes
+on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
+
+[gaps]
+    inner.horizontal = 8
+    inner.vertical   = 8
+    outer.left       = 8
+    outer.bottom     = 8
+    outer.top        = 8
+    outer.right      = 8
+
+[mode.main.binding]
+    # bspwm: super + {h,j,k,l} -> node -f {west,south,north,east}
+    alt-h = 'focus left'
+    alt-j = 'focus down'
+    alt-k = 'focus up'
+    alt-l = 'focus right'
+
+    # bspwm: super + shift + {h,j,k,l} -> node -s {west,south,north,east}
+    # 'move' swaps with the neighbour when there is one, and re-parents the window one level up when
+    # it has reached the edge of its container
+    alt-shift-h = 'move left'
+    alt-shift-j = 'move down'
+    alt-shift-k = 'move up'
+    alt-shift-l = 'move right'
+
+    # bspwm: super + {ctrl + ,}{h,j,k,l} -> node -z ...
+    # Each container holds exactly two children in 'bsp', so a resize is exactly a split-ratio nudge
+    alt-ctrl-h = 'resize width -50'
+    alt-ctrl-l = 'resize width +50'
+    alt-ctrl-j = 'resize height -50'
+    alt-ctrl-k = 'resize height +50'
+
+    # bspwm: super + ctrl + equal -> balance. Rebuilds the workspace as a balanced tree where every
+    # window gets the same area
+    alt-ctrl-equal = 'flatten-workspace-tree'
+    # Equalize the split ratios without reshaping the tree
+    alt-ctrl-minus = 'balance-sizes'
+
+    # There is no 'split' here on purpose: in 'bsp' the split happens when the window appears, so
+    # 'split' has nothing left to do. Reach for 'join-with' when you want to group windows by hand.
+    alt-shift-comma  = 'join-with left'
+    alt-shift-period = 'join-with right'
+
+    # bspwm: super + {t,shift + space} -> state {tiled,floating}
+    alt-t = 'layout tiling floating'
+    alt-f = 'fullscreen'
+
+    # bspwm: super + {_,shift + }{1-9} -> desktop -f / node -d
+    alt-1 = 'workspace 1'
+    alt-2 = 'workspace 2'
+    alt-3 = 'workspace 3'
+    alt-4 = 'workspace 4'
+    alt-5 = 'workspace 5'
+    alt-6 = 'workspace 6'
+    alt-7 = 'workspace 7'
+    alt-8 = 'workspace 8'
+    alt-9 = 'workspace 9'
+
+    alt-shift-1 = 'move-node-to-workspace 1'
+    alt-shift-2 = 'move-node-to-workspace 2'
+    alt-shift-3 = 'move-node-to-workspace 3'
+    alt-shift-4 = 'move-node-to-workspace 4'
+    alt-shift-5 = 'move-node-to-workspace 5'
+    alt-shift-6 = 'move-node-to-workspace 6'
+    alt-shift-7 = 'move-node-to-workspace 7'
+    alt-shift-8 = 'move-node-to-workspace 8'
+    alt-shift-9 = 'move-node-to-workspace 9'
+
+    alt-tab = 'workspace-back-and-forth'
+
+    # bspwm: super + {_,shift + }q -> node -{c,k}
+    alt-shift-q = 'close'
+
+    alt-shift-semicolon = 'mode service'
+
+[mode.service.binding]
+    esc = ['reload-config', 'mode main']
+    r = ['flatten-workspace-tree', 'mode main'] # reset the workspace to a balanced tree
+    f = ['layout floating tiling', 'mode main']
+    backspace = ['close-all-windows-but-current', 'mode main']
+
+    alt-shift-h = ['join-with left', 'mode main']
+    alt-shift-j = ['join-with down', 'mode main']
+    alt-shift-k = ['join-with up', 'mode main']
+    alt-shift-l = ['join-with right', 'mode main']

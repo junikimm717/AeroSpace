@@ -41,6 +41,8 @@ struct Config: ConvenienceMutable {
     var _nonEmptyWorkspacesRootContainersLayoutOnStartup: Void = ()
     var defaultRootContainerLayout: Layout = .tiles
     var defaultRootContainerOrientation: DefaultContainerOrientation = .auto
+    var tilingInsertionMode: TilingInsertionMode = .i3
+    var bspAutomaticScheme: BspAutomaticScheme = .longestSide
     var startAtLogin: Bool = false
     var autoReloadConfig: Bool = false
     var automaticallyUnhideMacosHiddenApps: Bool = false

@@ -413,6 +413,64 @@ enable-normalization-opposite-orientation-for-nested-containers = false
 
 Unless you're hardcore i3 user who knows what they are doing, it's recommended to keep the normalizations enabled.
 
+[#tiling-insertion-mode]
+=== Tiling insertion mode
+
+`tiling-insertion-mode` decides what happens to the tree when a new window appears.
+
+`tiling-insertion-mode = 'i3'` (the default) makes the new window a sibling of the focused window.
+Open three terminals on an empty workspace and the root container ends up holding all three of them:
+
+----
+h_tiles (root node)
+├── window 1
+├── window 2
+└── window 3
+----
+
+`tiling-insertion-mode = 'bsp'` instead splits the focused window in two and puts the new window in
+one of the halves. This is the "binary space partitioning" model that
+https://github.com/baskerville/bspwm[bspwm] and https://github.com/koekeishiya/yabai[yabai] use.
+The same three terminals produce:
+
+----
+h_tiles (root node)
+├── window 1
+└── v_tiles
+    ├── window 2
+    └── window 3
+----
+
+Every container holds exactly two children, so a window is never narrower than half of its
+neighbour, no matter how many windows a workspace accumulates.
+
+`bsp-automatic-scheme` picks the axis of the split (bspwm calls this `automatic_scheme`):
+
+- `longest-side` (the default) cuts the focused window's longer side, which keeps windows roughly
+square. A window twice as wide as it is tall is split into two columns; a tall one into two rows.
+- `alternate` ignores the window's shape and alternates between horizontal and vertical with tree
+depth.
+
+`bsp` owns the shape of the tree, so it pins both <<normalization,normalizations>> regardless of what
+the config says, and warns if the config disagrees:
+
+- `enable-normalization-flatten-containers` is forced *on*. It is what collapses a container back
+into its surviving sibling when a window closes, which is exactly how a BSP tree is supposed to
+behave on removal. Without it the tree only ever gets deeper.
+- `enable-normalization-opposite-orientation-for-nested-containers` is forced *off*. It is
+incompatible with `bsp`: cutting the longest side twice in a row legitimately nests a `v_tiles`
+inside a `v_tiles`.
+
+Two commands behave differently under `bsp`:
+
+- xref:commands.adoc#split[split] has nothing left to do, because the split already happened when the
+window appeared. Use xref:commands.adoc#join-with[join-with] when you want to group windows by hand.
+- xref:commands.adoc#flatten-workspace-tree[flatten-workspace-tree] can't put every window in one
+container, so it does the nearest equivalent: it rebuilds the workspace as a balanced tree in which
+every window gets the same area. It is the analog of bspwm's `balance`.
+
+See also: xref:goodies.adoc#bsp-config[bspwm like config].
+
 [#floating-windows]
 === Floating windows
 

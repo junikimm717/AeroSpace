@@ -21,6 +21,10 @@ aerospace flatten-workspace-tree [-h|--help] [--workspace <workspace>]
 
 The command is useful when you messed up with your layout, and it's easier to "reset" it and start again.
 
+When xref:guide.adoc#tiling-insertion-mode[`tiling-insertion-mode = 'bsp'`], a single container can't
+hold every window, so the command rebuilds the workspace as a balanced tree where every window gets
+the same area instead. It is the analog of bspwm's `balance`.
+
 // =========================================================== Options
 include::./util/conditional-options-header.adoc[]
 

@@ -121,6 +121,9 @@ private let keyMappingConfigRootKey = "key-mapping"
 private let configVersionConfigRootKey = "config-version"
 private let modeConfigRootKey = "mode"
 private let persistentWorkspacesKey = "persistent-workspaces"
+private let tilingInsertionModeKey = "tiling-insertion-mode"
+private let flattenContainersKey = "enable-normalization-flatten-containers"
+private let oppositeOrientationKey = "enable-normalization-opposite-orientation-for-nested-containers"
 
 // For every new config option you add, think:
 // 1. Does it make sense to have different value
@@ -141,6 +144,9 @@ private let configParser: [String: any ParserProtocol<Config>] = [
 
     "default-root-container-layout": Parser(\.defaultRootContainerLayout, parseLayout),
     "default-root-container-orientation": Parser(\.defaultRootContainerOrientation, parseDefaultContainerOrientation),
+
+    tilingInsertionModeKey: Parser(\.tilingInsertionMode, parseTilingInsertionMode),
+    "bsp-automatic-scheme": Parser(\.bspAutomaticScheme, parseBspAutomaticScheme),
 
     "start-at-login": Parser(\.startAtLogin, parseBool),
     "auto-reload-config": Parser(\.autoReloadConfig, parseBool),
@@ -288,6 +294,26 @@ struct ParseConfigResult {
             .toOrderedSet()
     }
 
+    // 'bsp' owns the shape of the tree, so the two normalizations aren't up for negotiation:
+    // - flatten is what collapses a container back into its surviving sibling when a window closes,
+    //   which is exactly bspwm's node-removal behaviour. Without it the tree only ever gets deeper.
+    // - opposite-orientation is incompatible: splitting the longest side twice in a row legitimately
+    //   produces a v_tiles inside a v_tiles.
+    if config.tilingInsertionMode == .bsp {
+        if !config.enableNormalizationFlattenContainers && rawTable.keys.contains(flattenContainersKey) {
+            let msg = "\(flattenContainersKey) = false is ignored when \(tilingInsertionModeKey) = 'bsp'. " +
+                "'bsp' needs the normalization to collapse a container into its surviving sibling when a window closes."
+            c.warnings.append(.init(.rootKey(flattenContainersKey), msg))
+        }
+        if config.enableNormalizationOppositeOrientationForNestedContainers && rawTable.keys.contains(oppositeOrientationKey) {
+            let msg = "\(oppositeOrientationKey) = true is ignored when \(tilingInsertionModeKey) = 'bsp'. " +
+                "'bsp' splits the longest side, which legitimately nests same-orientation containers."
+            c.warnings.append(.init(.rootKey(oppositeOrientationKey), msg))
+        }
+        config.enableNormalizationFlattenContainers = true
+        config.enableNormalizationOppositeOrientationForNestedContainers = false
+    }
+
     if config.enableNormalizationFlattenContainers {
         let containsSplitCommand = config.modes.values.lazy.flatMap { $0.bindings.values }
             .flatMap { $0.commands.flatten() }
@@ -409,6 +435,20 @@ private func parseArrayOfStrings(_ raw: OrderedJson, _ backtrace: ConfigBacktrac
                 parseString(elem, backtrace + .index(index))
             }
         }
+}
+
+private func parseTilingInsertionMode(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<TilingInsertionMode> {
+    parseString(raw, backtrace).flatMap {
+        TilingInsertionMode(rawValue: $0)
+            .toResult(.init(backtrace, "Can't parse tiling insertion mode '\($0)'. Possible values: i3|bsp"))
+    }
+}
+
+private func parseBspAutomaticScheme(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<BspAutomaticScheme> {
+    parseString(raw, backtrace).flatMap {
+        BspAutomaticScheme(rawValue: $0)
+            .toResult(.init(backtrace, "Can't parse bsp automatic scheme '\($0)'. Possible values: longest-side|alternate"))
+    }
 }
 
 private func parseDefaultContainerOrientation(_ raw: OrderedJson, _ backtrace: ConfigBacktrace) -> ResOrConfigParseDiagnostic<DefaultContainerOrientation> {

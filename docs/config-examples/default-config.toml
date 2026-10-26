@@ -34,6 +34,20 @@ default-root-container-layout = 'tiles'
 #               tall monitor (anything higher than wide) gets vertical orientation
 default-root-container-orientation = 'auto'
 
+# How new windows are placed. See: https://nikitabobko.github.io/AeroSpace/guide#tiling-insertion-mode
+# Possible values: i3|bsp
+#   'i3'  the new window becomes a sibling of the focused window, so a container can end up holding
+#         three or more windows side by side
+#   'bsp' the new window splits the focused window in two, so no window is ever narrower than half
+#         of its neighbour (binary space partitioning, like bspwm and yabai)
+tiling-insertion-mode = 'i3'
+
+# Which axis 'bsp' splits along. Has no effect when tiling-insertion-mode = 'i3'
+# Possible values: longest-side|alternate
+#   'longest-side' split the focused window's longer side, keeping windows close to square
+#   'alternate'    alternate between horizontal and vertical with tree depth
+bsp-automatic-scheme = 'longest-side'
+
 # Mouse follows focus when focused monitor changes
 # Drop it from your config, if you don't like this behavior
 # See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
