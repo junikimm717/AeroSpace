@@ -4,6 +4,7 @@
 /*
 
 # Top level dirs
+!/.claude
 !/.bundle
 !/.github
 !/Sources
@@ -32,3 +33,6 @@
 # XCode User settings
 xcuserdata/
 xcshareddata/
+
+# Claude Code personal settings
+/.claude/settings.local.json
