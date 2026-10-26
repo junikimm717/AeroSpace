@@ -153,6 +153,55 @@ final class BspInsertionTest: XCTestCase {
         assertEquals(containerArities(workspace.rootTilingContainer).filter { $0 > 2 }, [])
     }
 
+    func testMoveAcrossTheEdgeOfASameOrientationContainer() async {
+        // h_tiles[w1, h_tiles[w2, w3]]: w2 is a quarter of the screen next to the half-screen w1. Splitting
+        // w2's own container would be undone by normalization, so the move must cross into w1 instead
+        let workspace = Workspace.get(byName: name).apply {
+            $0.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0)
+                TilingContainer.newHTiles(parent: $0, adaptiveWeight: 1).apply {
+                    assertEquals(TestWindow.new(id: 2, parent: $0).focusWindow(), true)
+                    TestWindow.new(id: 3, parent: $0)
+                }
+            }
+        }
+
+        await parseCommand("move left").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        workspace.normalizeContainers()
+        assertEquals(
+            workspace.rootTilingContainer.layoutDescription,
+            .h_tiles([.h_tiles([.window(1), .window(2)]), .window(3)]),
+        )
+
+        // And from there an ordinary swap
+        await parseCommand("move left").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        workspace.normalizeContainers()
+        assertEquals(
+            workspace.rootTilingContainer.layoutDescription,
+            .h_tiles([.h_tiles([.window(2), .window(1)]), .window(3)]),
+        )
+    }
+
+    func testMoveIntoTheWorkspaceEdgeTakesHalfTheScreen() async {
+        // h_tiles[w1, h_tiles[w2, w3]]: nothing is right of w3, so it falls through to the workspace boundary
+        let workspace = Workspace.get(byName: name).apply {
+            $0.rootTilingContainer.apply {
+                TestWindow.new(id: 1, parent: $0)
+                TilingContainer.newHTiles(parent: $0, adaptiveWeight: 1).apply {
+                    TestWindow.new(id: 2, parent: $0)
+                    assertEquals(TestWindow.new(id: 3, parent: $0).focusWindow(), true)
+                }
+            }
+        }
+
+        await parseCommand("move right").cmdOrDie.run(.defaultEnv, .emptyStdin)
+        workspace.normalizeContainers()
+        assertEquals(
+            workspace.rootTilingContainer.layoutDescription,
+            .h_tiles([.h_tiles([.window(1), .window(2)]), .window(3)]),
+        )
+    }
+
     func testFlattenWorkspaceTreeRebuildsABalancedTree() async {
         let workspace = Workspace.get(byName: name).apply {
             $0.rootTilingContainer.apply { // A degenerate right-leaning chain, the worst case for bsp

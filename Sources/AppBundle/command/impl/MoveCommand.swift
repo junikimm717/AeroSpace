@@ -117,6 +117,16 @@ private let moveOutMacosUnconventionalWindow = "moving macOS fullscreen, minimiz
         }
     }) as? TilingContainer
     guard let innerMostTilingContainer else { return .fail(io.err(bugPrompt())) } // Impossible
+    if config.tilingInsertionMode == .bsp,
+       let parent = window.parent as? TilingContainer,
+       parent === innerMostTilingContainer,
+       parent.orientation == direction.orientation
+    {
+        // `window` sits at the edge of a container that already runs along `direction`. Splitting that
+        // container would give back `[window, [rest]]`, which normalization flattens into the very same
+        // tree, so the move would be a silent no-op. Cross the edge into the neighbouring node instead.
+        return bspMoveAcross(window, direction, io, args, env)
+    }
     switch innerMostTilingContainer.tilingContainerParentCases {
         case .unbound: return .fail
         case .tilingContainer(let parent):
@@ -128,6 +138,34 @@ private let moveOutMacosUnconventionalWindow = "moving macOS fullscreen, minimiz
         case .workspace(let parent):
             return hitWorkspaceBoundaries(window, parent, io, args, direction, env)
     }
+}
+
+/// Moves `window` past the edge of its container into whatever lies `direction`-ward of it, splitting the
+/// leaf of that neighbour which faces `window`, the same way moving into a sibling container does.
+@MainActor private func bspMoveAcross(
+    _ window: Window,
+    _ direction: CardinalDirection,
+    _ io: CmdIo,
+    _ args: MoveCmdArgs,
+    _ env: CmdEnv,
+) -> BinaryExitCode {
+    var node: TreeNode = window
+    while let parent = node.parent as? TilingContainer {
+        if parent.orientation == direction.orientation,
+           let index = node.ownIndex,
+           let neighbour = parent.children.getOrNil(atIndex: index + direction.focusOffset)
+        {
+            guard let leaf = neighbour.findLeafWindowRecursive(snappedTo: direction.opposite),
+                  insertTilingWindow(window, pushing: leaf, direction.opposite)
+            else {
+                return .fail(io.err(bugPrompt()))
+            }
+            return .succ
+        }
+        node = parent
+    }
+    guard let workspace = window.nodeWorkspace else { return .fail(io.err(bugPrompt())) }
+    return hitWorkspaceBoundaries(window, workspace, io, args, direction, env)
 }
 
 @MainActor private func createImplicitContainerAndMoveWindow(
